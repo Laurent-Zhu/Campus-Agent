@@ -4,25 +4,26 @@ from datetime import datetime
 
 class Question(BaseModel):
     """题目模型"""
-    id: str
+    id: Optional[int] = None
     type: str  # 选择题/填空题/简答题/编程题
     content: str
-    options: Optional[List[str]]  # 选择题选项
+    options: Optional[List[str]] = None  # 选择题选项，数据库存储为JSON字符串
     answer: str
-    analysis: str
-    difficulty: int = Field(ge=1, le=5)  # 难度1-5
+    analysis: Optional[str] = None
+    difficulty: int = Field(ge=1, le=5)
     knowledge_point: str
     score: int
+    exam_id: Optional[int] = None
 
 class Exam(BaseModel):
     """试卷模型"""
-    id: str
+    id: Optional[int] = None
     title: str
-    description: Optional[str]
-    course_id: str
+    description: Optional[str] = None
+    course_id: int
     total_score: int
-    duration: int  # 考试时长(分钟)
+    duration: int
     questions: List[Question]
-    created_at: datetime
-    created_by: str
-    status: str = "draft"  # draft/published
+    created_at: Optional[datetime] = None
+    created_by: Optional[int] = None
+    status: str = "draft"

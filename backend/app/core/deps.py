@@ -15,10 +15,11 @@ def get_db() -> Generator:
 
 async def get_current_user(
     db: Session = Depends(get_db),
-    token: str = Depends(decode_access_token)
+    token: dict = Depends(decode_access_token)
 ) -> User:
+    print("Received token:", token)
     try:
-        user = db.query(User).filter(User.id == token.sub).first()
+        user = db.query(User).filter(User.id == token["sub"]).first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

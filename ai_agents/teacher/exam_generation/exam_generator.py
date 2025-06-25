@@ -2,10 +2,9 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.agents import Tool
 from typing import List, Dict
-import uuid
-from datetime import datetime
 import random
 import json
+from datetime import datetime
 
 from models.exam import Question, Exam
 from utils.model_client import ChatGLMClient
@@ -25,59 +24,54 @@ class ExamGeneratorAgent:
         知识点: {knowledge_point}
         题型: {question_type}
         难度等级: {difficulty}/5
-        
+
         返回JSON格式包含:
         1. content: 题目内容
         2. options: 选项列表(选择题必需)
         3. answer: 标准答案
         4. analysis: 解题思路
+        5. score: 分值
         """
-        
         response = await self.client.generate_text(prompt)
         result = json.loads(response)
-        
         return Question(
-            id=str(uuid.uuid4()),
+            id=None,
             type=question_type,
             content=result["content"],
             options=result.get("options"),
             answer=result["answer"],
-            analysis=result["analysis"],
+            analysis=result.get("analysis"),
             difficulty=difficulty,
             knowledge_point=knowledge_point,
-            score=self._calculate_score(question_type, difficulty)
+            score=int(result.get("score", 5)),  # 默认5分
+            exam_id=None
         )
-    
-    async def __del__(self):
-        await self.client.close()
 
     async def generate_exam(
         self,
-        course_id: str,
+        course_id: int,
         knowledge_points: List[str],
-        question_config: Dict[str, int],  # {"选择题": 10, "填空题": 5}
-        difficulty: int = 3
+        question_config: Dict[str, int],
+        difficulty: int = 3,
+        duration: int = 90,
+        created_by: int = None
     ) -> Exam:
-        """生成完整试卷"""
         questions = []
         total_score = 0
-        
-        # 生成每种类型的题目
         for q_type, count in question_config.items():
             for _ in range(count):
                 k_point = random.choice(knowledge_points)
                 question = await self._generate_question(k_point, q_type, difficulty)
                 questions.append(question)
                 total_score += question.score
-        
-        # 创建试卷
         return Exam(
-            id=str(uuid.uuid4()),
+            id=None,
             title=f"自动生成试卷-{datetime.now().strftime('%Y%m%d%H%M')}",
             course_id=course_id,
             total_score=total_score,
-            duration=90,  # 默认90分钟
+            duration=duration,
             questions=questions,
             created_at=datetime.now(),
-            created_by="system"
+            created_by=created_by,
+            status="draft"
         )

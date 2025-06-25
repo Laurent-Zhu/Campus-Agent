@@ -2,9 +2,7 @@ from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 from typing import List
-from ..db.base_class import Base
-from exam import Exam
-from exam import User
+from backend.app.db.base_class import Base
 
 class Course(Base):
     __tablename__ = "courses"

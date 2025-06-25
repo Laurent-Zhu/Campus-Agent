@@ -2,16 +2,27 @@ from logging.config import fileConfig
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 from alembic import context
-from models.database import Base  # 导入模型
 from dotenv import load_dotenv
 import os
+import sys
 
 # 加载环境变量
 load_dotenv()
 
 # 获取数据库URL
 config = context.config
-config.set_main_option("sqlalchemy.url", os.getenv("DB_URL", "sqlite:///./campus.db"))
+config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL", "sqlite:///./campus_agent.db"))
+
+# 确保项目根目录在sys.path
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+BACKEND_DIR = os.path.join(BASE_DIR, 'backend')
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
+
+from app.db.base_class import Base
+import app.models.user
+import app.models.course
+import app.models.exam
 
 # 添加模型的元数据
 target_metadata = Base.metadata

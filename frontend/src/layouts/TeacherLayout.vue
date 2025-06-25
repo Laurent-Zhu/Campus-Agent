@@ -5,6 +5,10 @@
         :router="true"
         class="el-menu-vertical"
       >
+        <el-menu-item index="/teacher/exam-generate">
+          <el-icon><Document /></el-icon>
+          <span>生成考核</span>
+        </el-menu-item>
         <el-menu-item index="/teacher/exam">
           <el-icon><Document /></el-icon>
           <span>考核管理</span>
@@ -20,7 +24,7 @@
       </el-header>
       
       <el-main>
-        <router-view></router-view>
+        <router-view /> <!-- 渲染子页面 -->
       </el-main>
     </el-container>
   </el-container>

@@ -5,7 +5,7 @@ from typing import List, Optional
 class QuestionBase(BaseModel):
     type: str
     content: str
-    options: Optional[List[str]] = None
+    options: Optional[List[str]] = None  # 选择题选项，数据库存储为JSON字符串
     answer: str
     analysis: Optional[str] = None
     score: int
@@ -16,9 +16,9 @@ class QuestionCreate(QuestionBase):
     pass
 
 class Question(QuestionBase):
-    id: int
-    exam_id: int
-    
+    id: Optional[int] = None
+    exam_id: Optional[int] = None
+
     class Config:
         from_attributes = True
 
@@ -33,12 +33,12 @@ class ExamCreate(ExamBase):
     questions: List[QuestionCreate]
 
 class Exam(ExamBase):
-    id: int
-    created_by: int
-    created_at: datetime
+    id: Optional[int] = None
+    created_by: Optional[int] = None
+    created_at: Optional[datetime] = None
     status: str
     questions: List[Question]
-    
+
     class Config:
         from_attributes = True
 
@@ -47,3 +47,11 @@ class ExamGenerateRequest(BaseModel):
     knowledge_points: List[str]
     question_types: dict  # {"choice": 5, "completion": 3, "programming": 2}
     difficulty: int  # 1-5
+
+class ExamUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    duration: Optional[int] = None
+    total_score: Optional[int] = None
+    status: Optional[str] = None
+    questions: Optional[List[QuestionCreate]] = None

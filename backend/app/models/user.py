@@ -2,8 +2,7 @@ from sqlalchemy import Column, Integer, String, DateTime
 from sqlalchemy.orm import relationship, Mapped
 from datetime import datetime
 from typing import List
-from ..db.base_class import Base
-from exam import Exam
+from backend.app.db.base_class import Base
 
 class User(Base):
     __tablename__ = "users"

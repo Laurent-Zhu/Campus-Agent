@@ -10,6 +10,7 @@ class ChatGLMClient:
     def __init__(self):
         self.config = ModelConfig()
         self.api_key = self.config.API_KEY.strip()
+        print("实际读取到的API_KEY:", repr(self.api_key))  # 添加这一行
         self.client = httpx.AsyncClient(
             base_url=self.config.API_BASE_URL,
             headers={
@@ -19,6 +20,7 @@ class ChatGLMClient:
             },
             timeout=30.0
         )
+        print("Loaded api_key:", self.api_key)
     
     def _generate_auth_string(self) -> str:
         """生成认证字符串"""

@@ -114,15 +114,17 @@ class ExamGeneratorAgent(BaseAgent):
         questions = []
         
         for q_type, count in question_types.items():
-            for _ in range(count):
-                knowledge_point = knowledge_points[_ % len(knowledge_points)]
+            for i in range(count):
+                knowledge_point = knowledge_points[i % len(knowledge_points)]
                 
                 result = await self.agent_executor.arun(
                     course=course,
                     knowledge_points=knowledge_point,
                     difficulty=difficulty
                 )
-                
+                # 确保score为int
+                if isinstance(result, dict) and "score" in result:
+                    result["score"] = int(result["score"])
                 questions.append(result)
         
         return questions
