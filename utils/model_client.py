@@ -5,6 +5,9 @@ import base64
 import time
 import hashlib
 from config.model_config import ModelConfig
+from langchain_community.chat_models import ChatZhipuAI
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from zhipuai import ZhipuAI
 
 class ChatGLMClient:
     def __init__(self):
@@ -38,41 +41,70 @@ class ChatGLMClient:
         except Exception as e:
             raise Exception(f"生成认证字符串失败: {str(e)}")
 
+    # async def generate_text(self, prompt: str) -> str:
+    #     """调用 API 生成文本"""
+    #     try:
+    #         # 更新认证头
+    #         self.client.headers["Authorization"] = self._generate_auth_string()
+    #         client = ZhipuAI(api_key = self.api_key)
+    #         response_test = client.chat.completions.create(
+    #             model="glm-4-plus",
+    #             messages=[
+
+    #             ]
+    #         )
+    #         request_data = {
+    #             "model": self.config.API_VERSION,
+    #             "messages": [{"role": "user", "content": prompt}],
+    #             "temperature": 0.7,
+    #         }
+    #         print("Request Headers:", self.client.headers)
+    #         print("Request Data:", json.dumps(request_data, ensure_ascii=False))
+            
+    #         response = await self.client.post(
+    #             "/invoke",
+    #             json=request_data
+    #         )
+            
+    #         # 打印完整响应
+    #         print(f"Status Code: {response.status_code}")
+    #         print(f"Response Headers: {dict(response.headers)}")
+    #         print(f"Response Body: {response.text}")
+            
+    #         response.raise_for_status()
+    #         result = response.json()
+            
+    #         if not result.get("success", False):
+    #             error_msg = result.get("msg", "未知错误")
+    #             raise Exception(error_msg)
+            
+    #         return result["data"]["choices"][0]["content"]
+            
+    #     except Exception as e:
+    #         raise Exception(f"API调用失败: {str(e)}")
+
+    # async def close(self):
+    #     await self.client.aclose()
+
     async def generate_text(self, prompt: str) -> str:
-        """调用 API 生成文本"""
+        """调用 ZhipuAI SDK 生成文本"""
         try:
-            # 更新认证头
-            self.client.headers["Authorization"] = self._generate_auth_string()
-            
-            request_data = {
-                "model": self.config.API_VERSION,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7,
-            }
-            print("Request Headers:", self.client.headers)
-            print("Request Data:", json.dumps(request_data, ensure_ascii=False))
-            
-            response = await self.client.post(
-                "/invoke",
-                json=request_data
+            client = ZhipuAI(api_key=self.api_key)
+            response = client.chat.completions.create(
+                model="glm-4-plus",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你是一个乐于解答各种问题的助手，你的任务是为用户提供专业、准确、有见地的建议。"
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
             )
-            
-            # 打印完整响应
-            print(f"Status Code: {response.status_code}")
-            print(f"Response Headers: {dict(response.headers)}")
-            print(f"Response Body: {response.text}")
-            
-            response.raise_for_status()
-            result = response.json()
-            
-            if not result.get("success", False):
-                error_msg = result.get("msg", "未知错误")
-                raise Exception(error_msg)
-            
-            return result["data"]["choices"][0]["content"]
-            
+            print("ZhipuAI response:", response)
+            # 兼容返回结构
+            return response.choices[0].message.content
         except Exception as e:
             raise Exception(f"API调用失败: {str(e)}")
-
-    async def close(self):
-        await self.client.aclose()
