@@ -1,0 +1,7 @@
+FastAPI
+uvicorn
+httpx
+pydantic
+reportlab
+jinja2
+zhipuai

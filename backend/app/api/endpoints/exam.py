@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Response
 from sqlalchemy.orm import Session
 from typing import List
 from ...core.deps import get_db, get_current_user
@@ -10,6 +10,27 @@ from ai_agents.factory import AgentFactory
 import datetime
 import json
 from fastapi.responses import JSONResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from io import BytesIO
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+from urllib.parse import quote
+
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+
+from reportlab.lib.fonts import addMapping
+
+from docx import Document
+from docx.shared import Pt
+from docx.oxml.ns import qn
+
+pdfmetrics.registerFont(TTFont('SimHei', '/home/laurentzhu/PycharmProjects/CampusAgent/campus-agent/backend/app/static/fonts/simhei.ttf'))
+addMapping('SimHei', 0, 0, 'SimHei')
 
 router = APIRouter()
 
@@ -20,6 +41,7 @@ async def generate_exam(
     db: Session = Depends(get_db)
 ):
     """生成考试题目"""
+    print("backend/app/api/endpoints/exam.py的generate_exam正在生成考试试卷")
     if current_user.role != "teacher":
         raise HTTPException(
             status_code=403,
@@ -29,6 +51,7 @@ async def generate_exam(
         agent = AgentFactory.create_agent("exam_generator")
         if not agent:
             raise ValueError("创建智能体失败")
+        print("generate_exam开始")
         questions_exam = await agent.generate_exam(
             course_id=request.course_id,
             knowledge_points=request.knowledge_points,
@@ -37,16 +60,9 @@ async def generate_exam(
             duration=120,
             created_by=current_user.id
         )
-        total_score = sum(q.score for q in questions_exam.questions)
-        exam = ExamCreate(
-            title=questions_exam.title,
-            description="基于知识点智能生成的试卷",
-            course_id=request.course_id,
-            questions=questions_exam.questions,
-            total_score=total_score,
-            duration=120
-        )
-        return exam
+        print("generate_exam成功")
+        print("准备return questions_exam")
+        return questions_exam#exam
     except Exception as e:
         print("生成考试异常:", e)  # 添加这一行
         raise HTTPException(
@@ -54,7 +70,163 @@ async def generate_exam(
             detail=f"生成考试失败: {str(e)}"
         )
 
-@router.post("/", response_model=Exam)
+def generate_word_from_exam_data(exam_data: dict) -> BytesIO:
+    document = Document()
+
+    # 设置默认字体为 SimHei（黑体）
+    style = document.styles['Normal']
+    font = style.font
+    font.name = 'SimHei'
+    font.size = Pt(12)
+    # 设置中文字体（Windows 下有效，Linux 下无影响）
+    r = style.element.rPr
+    r.rFonts.set(qn('w:eastAsia'), 'SimHei')
+
+    # 标题
+    document.add_heading(exam_data.get("title", "试卷"), level=1)
+
+    # 题目
+    for idx, q in enumerate(exam_data.get("questions", []), 1):
+        document.add_paragraph(f"Q{idx}: {q.get('content', '')}")
+
+        options = q.get("options", [])
+        if isinstance(options, list):
+            for i, opt in enumerate(options):
+                label = chr(65 + i)  # A, B, C...
+                if isinstance(opt, dict):
+                    text = f"{label}. {opt.get('text', '')}"
+                else:
+                    text = f"{label}. {str(opt)}"
+                document.add_paragraph(text, style='List Bullet')
+
+        document.add_paragraph(f"答案: {q.get('answer', '')}")
+        document.add_paragraph(f"解析: {q.get('analysis', '')}")
+        document.add_paragraph("")  # 空行
+
+    # 保存到内存 buffer
+    buffer = BytesIO()
+    document.save(buffer)
+    buffer.seek(0)
+    return buffer
+
+
+def generate_pdf_from_exam_data(exam_data: dict) -> BytesIO:
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=20*mm, rightMargin=20*mm, topMargin=20*mm, bottomMargin=20*mm)
+    styles = getSampleStyleSheet()
+    styles['Normal'].fontName = 'SimHei'
+    styles['Title'].fontName = 'SimHei'
+
+    story = []
+    story.append(Paragraph(exam_data.get("title", "试卷"), styles['Title']))
+    story.append(Spacer(1, 12))
+
+    for idx, q in enumerate(exam_data.get("questions", []), 1):
+        question_text = f"Q{idx}: {q.get('content', '')}"
+        story.append(Paragraph(question_text, styles['Normal']))
+        story.append(Spacer(1, 6))
+
+        options = q.get("options", [])
+        if isinstance(options, list):
+            for opt in options:
+                story.append(Paragraph(opt, styles['Normal']))
+                story.append(Spacer(1, 3))
+
+        story.append(Paragraph(f"答案: {q.get('answer', '')}", styles['Normal']))
+        story.append(Spacer(1, 3))
+        story.append(Paragraph(f"解析: {q.get('analysis', '')}", styles['Normal']))
+        story.append(Spacer(1, 12))
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+@router.post("/generate-pdf")
+async def generate_exam_pdf(exam_data: dict):
+    """
+    接收前端传来的试卷内容，生成PDF并返回文件流
+    """
+    print("backend/app/api/endpoints/exam.py的generate_exam_pdf正在工作")
+    print("收到的exam_data:", exam_data)
+    try:
+        buffer = BytesIO()
+        c = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+
+        print(pdfmetrics.getRegisteredFontNames())
+
+        y = height - 50
+        c.setFont("SimHei", 16)
+        c.drawString(50, y, exam_data.get("title", "试卷"))
+        y -= 30
+
+        c.setFont("SimHei", 12)
+
+        for idx, q in enumerate(exam_data.get("questions", []), 1):
+            print(f"处理第{idx}题: {q}")
+            c.drawString(50, y, f"Q{idx}: {q.get('content', '')}")
+            y -= 20
+            options = q.get("options") or []
+            if isinstance(options, list) and options:
+                if isinstance(options[0], dict):
+                    options = [f"{opt.get('label', chr(65+i))}. {opt.get('text', '')}" for i, opt in enumerate(options)]
+                elif not isinstance(options[0], str):
+                    options = [str(opt) for opt in options]
+            for opt in options:
+                c.drawString(70, y, f"{opt}")
+                y -= 15
+            c.drawString(70, y, f"答案: {q.get('answer', '')}")
+            y -= 15
+            c.drawString(70, y, f"解析: {q.get('analysis', '')}")
+            y -= 25
+            if y < 100:
+                c.showPage()
+                y = height - 50
+
+        c.save()
+        buffer.seek(0)
+
+        pdf_buffer = generate_pdf_from_exam_data(exam_data)
+        filename = f"{exam_data.get('title', 'exam')}.pdf"
+        encoded_filename = quote(filename)
+        # return Response(
+        #     buffer.read(),
+        #     media_type="application/pdf",
+        #     headers={"Content-Disposition": f"attachment; filename={exam_data.get('title', 'exam')}.pdf"}
+        # )
+        return Response(
+            pdf_buffer.read(),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+    except Exception as e:
+        import traceback
+        print("PDF生成异常:", e)
+        traceback.print_exc()
+        print("出错的exam_data:", exam_data)
+        raise HTTPException(status_code=500, detail=f"PDF生成失败: {str(e)}")
+
+@router.post("/generate-word")
+async def generate_exam_word(exam_data: dict):
+    try:
+        word_buffer = generate_word_from_exam_data(exam_data)
+        filename = f"{exam_data.get('title', 'exam')}.docx"
+        encoded_filename = quote(filename)
+
+        return Response(
+            content=word_buffer.read(),
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Word生成失败: {str(e)}")
+
 async def create_exam(
     exam: ExamCreate,
     current_user: User = Depends(get_current_user),

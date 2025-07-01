@@ -65,7 +65,8 @@
       <template #header>
         <div class="card-header">
           <span>试卷预览</span>
-          <el-button type="success" @click="handleDownload">下载试卷</el-button>
+          <el-button type="success" @click="handleDownloadPDF">下载试卷(.pdf)</el-button>
+          <el-button type="success" @click="handleDownloadWORD">下载试卷(.docx)</el-button>
         </div>
       </template>
       <div>
@@ -147,22 +148,35 @@ async function handleGenerate() {
   loading.value = false
 }
 
-async function handleDownload() {
+async function handleDownloadPDF() {
   if (!examData.value) return
-  // 假设后端提供 /api/v1/exams/download/{exam_id} 下载接口
-  // 这里用 examData.value.id，如果没有id可用临时方案导出JSON
-  if (examData.value.id) {
-    window.open(`/api/v1/exams/download/${examData.value.id}`)
-  } else {
-    // 前端导出JSON
-    const blob = new Blob([JSON.stringify(examData.value, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${examData.value.title || 'exam'}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const res = await axios.post(
+    '/api/v1/exams/generate-pdf',
+    examData.value,
+    { responseType: 'blob' }
+  )
+  const blob = new Blob([res.data], { type: 'application/pdf' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${examData.value.title || 'exam'}.pdf`
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
+async function handleDownloadWORD() {
+  if (!examData.value) return
+  const res = await axios.post(
+    '/api/v1/exams/generate-word',
+    examData.value,
+    { responseType: 'blob' }
+  )
+  const blob = new Blob([res.data], { type: 'application/docx' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${examData.value.title || 'exam'}.docx`
+  a.click()
+  window.URL.revokeObjectURL(url)
 }
 </script>
 

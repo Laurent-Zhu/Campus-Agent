@@ -12,8 +12,15 @@ class QuestionBase(BaseModel):
     knowledge_point: str
     difficulty: int
 
-class QuestionCreate(QuestionBase):
-    pass
+class QuestionCreate(BaseModel):
+    type: str
+    content: str
+    options: Optional[List[str]]
+    answer: str
+    analysis: Optional[str]
+    difficulty: int
+    knowledge_point: str
+    score: int
 
 class Question(QuestionBase):
     id: Optional[int] = None
@@ -29,8 +36,18 @@ class ExamBase(BaseModel):
     duration: int
     total_score: int
 
-class ExamCreate(ExamBase):
+# class ExamCreate(ExamBase):
+#     questions: List[QuestionCreate]
+class ExamCreate(BaseModel):
+    id: Optional[int] = None
+    title: str
+    course_id: int
+    total_score: int
+    duration: int
     questions: List[QuestionCreate]
+    created_at: datetime
+    created_by: Optional[int]
+    status: str
 
 class Exam(ExamBase):
     id: Optional[int] = None

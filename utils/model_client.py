@@ -89,6 +89,7 @@ class ChatGLMClient:
     async def generate_text(self, prompt: str) -> str:
         """调用 ZhipuAI SDK 生成文本"""
         try:
+            print("utils/model_client.py的generate_text在工作")
             client = ZhipuAI(api_key=self.api_key)
             response = client.chat.completions.create(
                 model="glm-4-plus",

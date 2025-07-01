@@ -28,7 +28,7 @@
             placeholder="选择知识点"
           >
             <el-option
-              v-for="point in knowledgePoints"
+              v-for="point in currentKnowledgePoints"
               :key="point"
               :label="point"
               :value="point"
@@ -130,6 +130,7 @@
 import { ref, computed } from 'vue'
 import { useExamStore } from '@/stores/exam'
 import { ElMessage } from 'element-plus'
+import axios from 'axios'
 
 const examStore = useExamStore()
 
@@ -153,6 +154,17 @@ const questionTypes = [
   { label: '填空题', value: 'completion', score: 10 },
   { label: '编程题', value: 'programming', score: 20 }
 ]
+
+const courseOptions = computed(() => examStore.courseOptions)
+const knowledgePointMap = computed(() => examStore.knowledgePointMap)
+const currentKnowledgePoints = computed(() => {
+  if (!examConfig.value.courseId) return []
+  return knowledgePointMap.value[examConfig.value.courseId] || []
+})
+
+function onCourseChange() {
+  examConfig.value.knowledgePoints = []
+}
 
 // 计算属性
 const totalQuestions = computed(() => {
