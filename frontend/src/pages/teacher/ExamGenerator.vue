@@ -105,8 +105,11 @@ const examConfig = ref({
 })
 
 const questionTypes = [
-  { value: 'choice', label: '选择题' },
+  { value: 'single_choice', label: '单选题' },
+  { value: 'multiple_choice', label: '多选题' },
+  { value: 'true_false', label: '判断题' },
   { value: 'completion', label: '填空题' },
+  { value: 'case_analysis', label: '案例分析题' },
   { value: 'programming', label: '编程题' }
 ]
 
@@ -131,7 +134,7 @@ async function handleGenerate() {
       {
         course_id: examConfig.value.courseId,
         knowledge_points: examConfig.value.knowledgePoints,
-        question_types: examConfig.value.questionTypes,
+        question_types: examConfig.value.questionTypes, // 包含题型和数量
         difficulty: examConfig.value.difficulty
       },
       {

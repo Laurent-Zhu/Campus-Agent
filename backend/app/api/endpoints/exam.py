@@ -55,16 +55,15 @@ async def generate_exam(
         questions_exam = await agent.generate_exam(
             course_id=request.course_id,
             knowledge_points=request.knowledge_points,
-            question_config=request.question_types,
+            question_config=request.question_types,  # 传递题型和数量配置
             difficulty=request.difficulty,
             duration=120,
             created_by=current_user.id
         )
         print("generate_exam成功")
-        print("准备return questions_exam")
-        return questions_exam#exam
+        return questions_exam
     except Exception as e:
-        print("生成考试异常:", e)  # 添加这一行
+        print("生成考试异常:", e)
         raise HTTPException(
             status_code=500,
             detail=f"生成考试失败: {str(e)}"
