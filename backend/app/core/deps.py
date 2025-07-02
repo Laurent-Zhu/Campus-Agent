@@ -31,3 +31,8 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="无效的认证凭据"
         )
+
+# deps.py
+def get_vector_store():
+    from backend.app.main import vector_store
+    return vector_store

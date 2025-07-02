@@ -28,6 +28,9 @@ from docx import Document
 from docx.shared import Pt
 from docx.oxml.ns import qn
 
+# from backend.app.main import vector_store
+from ...core.deps import get_vector_store
+
 pdfmetrics.registerFont(TTFont('SimHei', '/home/laurentzhu/PycharmProjects/CampusAgent/campus-agent/backend/app/static/fonts/simhei.ttf'))
 addMapping('SimHei', 0, 0, 'SimHei')
 
@@ -51,13 +54,15 @@ async def generate_exam(
         if not agent:
             raise ValueError("创建智能体失败")
         print("generate_exam开始")
+        vector_store = get_vector_store()
         questions_exam = await agent.generate_exam(
             course_id=request.course_id,
             knowledge_points=request.knowledge_points,
             question_config=request.question_types,  # 传递题型和数量配置
             difficulty=request.difficulty,
             duration=120,
-            created_by=current_user.id
+            created_by=current_user.id,
+            vector_store=vector_store  # 传递知识库
         )
         print("generate_exam成功")
         return questions_exam
@@ -68,7 +73,7 @@ async def generate_exam(
             detail=f"生成考试失败: {str(e)}"
         )
 
-def generate_word_from_exam_data(exam_data: dict) -> BytesIO:
+def generate_word_from_exam_data(exam_data: dict, include_analysis: bool = True) -> BytesIO:
     document = Document()
 
     # 设置默认字体为 SimHei（黑体）
@@ -97,8 +102,10 @@ def generate_word_from_exam_data(exam_data: dict) -> BytesIO:
                     text = f"{label}. {str(opt)}"
                 document.add_paragraph(text, style='List Bullet')
 
-        document.add_paragraph(f"答案: {q.get('answer', '')}")
-        document.add_paragraph(f"解析: {q.get('analysis', '')}")
+        # 根据 include_analysis 参数决定是否包含答案和解析
+        if include_analysis:
+            document.add_paragraph(f"答案: {q.get('answer', '')}")
+            document.add_paragraph(f"解析: {q.get('analysis', '')}")
         document.add_paragraph("")  # 空行
 
     # 保存到内存 buffer
@@ -108,7 +115,7 @@ def generate_word_from_exam_data(exam_data: dict) -> BytesIO:
     return buffer
 
 
-def generate_pdf_from_exam_data(exam_data: dict) -> BytesIO:
+def generate_pdf_from_exam_data(exam_data: dict, include_analysis: bool = True) -> BytesIO:
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4, leftMargin=20*mm, rightMargin=20*mm, topMargin=20*mm, bottomMargin=20*mm)
     styles = getSampleStyleSheet()
@@ -130,68 +137,26 @@ def generate_pdf_from_exam_data(exam_data: dict) -> BytesIO:
                 story.append(Paragraph(opt, styles['Normal']))
                 story.append(Spacer(1, 3))
 
-        story.append(Paragraph(f"答案: {q.get('answer', '')}", styles['Normal']))
-        story.append(Spacer(1, 3))
-        story.append(Paragraph(f"解析: {q.get('analysis', '')}", styles['Normal']))
-        story.append(Spacer(1, 12))
+        if include_analysis:
+            story.append(Paragraph(f"答案: {q.get('answer', '')}", styles['Normal']))
+            story.append(Spacer(1, 3))
+            story.append(Paragraph(f"解析: {q.get('analysis', '')}", styles['Normal']))
+            story.append(Spacer(1, 12))
 
     doc.build(story)
     buffer.seek(0)
     return buffer
 
 @router.post("/generate-pdf")
-async def generate_exam_pdf(exam_data: dict):
+async def generate_exam_pdf(exam_data: dict, include_analysis: bool = True):
     """
     接收前端传来的试卷内容，生成PDF并返回文件流
     """
-    print("backend/app/api/endpoints/exam.py的generate_exam_pdf正在工作")
-    print("收到的exam_data:", exam_data)
     try:
-        buffer = BytesIO()
-        c = canvas.Canvas(buffer, pagesize=A4)
-        width, height = A4
-
-        print(pdfmetrics.getRegisteredFontNames())
-
-        y = height - 50
-        c.setFont("SimHei", 16)
-        c.drawString(50, y, exam_data.get("title", "试卷"))
-        y -= 30
-
-        c.setFont("SimHei", 12)
-
-        for idx, q in enumerate(exam_data.get("questions", []), 1):
-            print(f"处理第{idx}题: {q}")
-            c.drawString(50, y, f"Q{idx}: {q.get('content', '')}")
-            y -= 20
-            options = q.get("options") or []
-            if isinstance(options, list) and options:
-                if isinstance(options[0], dict):
-                    options = [f"{opt.get('label', chr(65+i))}. {opt.get('text', '')}" for i, opt in enumerate(options)]
-                elif not isinstance(options[0], str):
-                    options = [str(opt) for opt in options]
-            for opt in options:
-                c.drawString(70, y, f"{opt}")
-                y -= 15
-            c.drawString(70, y, f"答案: {q.get('answer', '')}")
-            y -= 15
-            c.drawString(70, y, f"解析: {q.get('analysis', '')}")
-            y -= 25
-            if y < 100:
-                c.showPage()
-                y = height - 50
-
-        c.save()
-        buffer.seek(0)
-
-        pdf_buffer = generate_pdf_from_exam_data(exam_data)
+        pdf_buffer = generate_pdf_from_exam_data(exam_data, include_analysis)
         filename = f"{exam_data.get('title', 'exam')}.pdf"
         encoded_filename = quote(filename)
-        # return Response(
-        #     buffer.read(),
-        #     media_type="application/pdf",
-        #     headers={"Content-Disposition": f"attachment; filename={exam_data.get('title', 'exam')}.pdf"}
-        # )
+
         return Response(
             pdf_buffer.read(),
             media_type="application/pdf",
@@ -201,15 +166,16 @@ async def generate_exam_pdf(exam_data: dict):
         )
     except Exception as e:
         import traceback
-        print("PDF生成异常:", e)
         traceback.print_exc()
-        print("出错的exam_data:", exam_data)
         raise HTTPException(status_code=500, detail=f"PDF生成失败: {str(e)}")
 
 @router.post("/generate-word")
-async def generate_exam_word(exam_data: dict):
+async def generate_exam_word(exam_data: dict, include_analysis: bool = True):
+    """
+    接收前端传来的试卷内容，生成Word文档并返回文件流
+    """
     try:
-        word_buffer = generate_word_from_exam_data(exam_data)
+        word_buffer = generate_word_from_exam_data(exam_data, include_analysis)
         filename = f"{exam_data.get('title', 'exam')}.docx"
         encoded_filename = quote(filename)
 

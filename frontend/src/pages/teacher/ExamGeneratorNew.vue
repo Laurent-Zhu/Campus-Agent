@@ -76,15 +76,27 @@
             <div style="display: flex; gap: 8px;">
               <el-button
                 style="background-color: #2ea44f; border-color: #2ea44f; color: white"
-                @click="handleDownloadPDF"
-              >
-                下载试卷(.pdf)
+                @click="handleDownloadPDF(false)"
+                >
+                下载试题(.pdf)
+                </el-button>
+                <el-button
+                style="background-color: #2ea44f; border-color: #2ea44f; color: white"
+                @click="handleDownloadPDF(true)"
+                >
+                下载试题+答案解析(.pdf)
               </el-button>
               <el-button
                 style="background-color: #2ea44f; border-color: #2ea44f; color: white"
-                @click="handleDownloadWORD"
-              >
-                下载试卷(.docx)
+                @click="handleDownloadWORD(false)"
+                >
+                下载试题(.docx)
+                </el-button>
+                <el-button
+                style="background-color: #2ea44f; border-color: #2ea44f; color: white"
+                @click="handleDownloadWORD(true)"
+                >
+                下载试题+答案解析(.docx)
               </el-button>
             </div>
           </div>
@@ -180,37 +192,43 @@
     loading.value = false
   }
   
-  async function handleDownloadPDF() {
-    if (!examData.value) return
-    const res = await axios.post(
-      '/api/v1/exams/generate-pdf',
-      examData.value,
-      { responseType: 'blob' }
-    )
-    const blob = new Blob([res.data], { type: 'application/pdf' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${examData.value.title || 'exam'}.pdf`
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
+  async function handleDownloadPDF(includeAnalysis) {
+  if (!examData.value) return
+  const res = await axios.post(
+    '/api/v1/exams/generate-pdf',
+    examData.value,
+    {
+      params: { include_analysis: includeAnalysis },
+      responseType: 'blob'
+    }
+  )
+  const blob = new Blob([res.data], { type: 'application/pdf' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${examData.value.title || 'exam'}${includeAnalysis ? '_with_analysis' : ''}.pdf`
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
   
-  async function handleDownloadWORD() {
-    if (!examData.value) return
-    const res = await axios.post(
-      '/api/v1/exams/generate-word',
-      examData.value,
-      { responseType: 'blob' }
-    )
-    const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${examData.value.title || 'exam'}.docx`
-    a.click()
-    window.URL.revokeObjectURL(url)
-  }
+async function handleDownloadWORD(includeAnalysis) {
+  if (!examData.value) return
+  const res = await axios.post(
+    '/api/v1/exams/generate-word',
+    examData.value,
+    {
+      params: { include_analysis: includeAnalysis },
+      responseType: 'blob'
+    }
+  )
+  const blob = new Blob([res.data], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${examData.value.title || 'exam'}${includeAnalysis ? '_with_analysis' : ''}.docx`
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
   </script>
   
   <style scoped>
