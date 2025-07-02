@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import List
 from ...core.deps import get_db, get_current_user
 from ...schemas.exam import ExamCreate, Exam, ExamGenerateRequest, ExamUpdate
-from ...services.exam_service import ExamGenerator
 from ...models.exam import Exam as ExamModel, Question as QuestionModel
 from ...models.user import User
 from ai_agents.factory import AgentFactory

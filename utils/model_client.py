@@ -96,7 +96,7 @@ class ChatGLMClient:
                 messages=[
                     {
                         "role": "system",
-                        "content": "你是一个乐于解答各种问题的助手，你的任务是为用户提供专业、准确、有见地的建议。"
+                        "content": "你是一个善于生成考试试卷的助手，你的任务是根据用户的要求生成高质量的考试试题。"
                     },
                     {
                         "role": "user",

@@ -97,8 +97,11 @@ const examConfig = ref({
   courseId: '',
   knowledgePoints: [],
   questionTypes: {
-    choice: 1,
+    single_choice: 0,
+    multiple_choice: 0,
+    true_false: 0,
     completion: 0,
+    case_analysis: 0,
     programming: 0
   },
   difficulty: 3

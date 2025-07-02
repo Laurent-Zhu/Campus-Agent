@@ -11,10 +11,12 @@ class RegisterRequest(BaseModel):
     username: str
     email: str
     password: str
+    role: str
 
 class LoginRequest(BaseModel):
     username: str
     password: str
+    role: str
 
 @router.post("/register")
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
@@ -25,7 +27,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         username=request.username,
         email=request.email,
         hashed_password=get_password_hash(request.password),
-        role="teacher"
+        role=request.role
     )
     db.add(new_user)
     db.commit()
@@ -35,7 +37,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 @router.post("/login")
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == request.username).first()
-    if not user or not verify_password(request.password, user.hashed_password):
-        raise HTTPException(status_code=401, detail="用户名或密码错误")
-    token = create_access_token(user.id)
+    if not user or not verify_password(request.password, user.hashed_password) or user.role != request.role:
+        raise HTTPException(status_code=401, detail="用户名或密码或身份错误")
+    token = create_access_token(user.id, user.role)
     return {"access_token": token, "token_type": "bearer"}

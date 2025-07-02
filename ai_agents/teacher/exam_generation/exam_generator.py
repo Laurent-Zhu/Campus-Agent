@@ -32,12 +32,39 @@ class ExamGeneratorAgent:
         # 根据题型生成不同的提示词
         if question_type == "填空题":
             prompt = f"""
-            请根据以下要求生成一道填空题:
+            请根据以下要求生成一道填空题(不要给出选项，也就是说不要出成选择题):
             知识点: {knowledge_point}
             难度等级: {difficulty}/5
 
             返回JSON格式包含:
             1. content: 题目内容（包含空白处）
+            2. answer: 标准答案
+            3. analysis: 解题思路
+            4. score: 分值
+            """
+        elif question_type == "多选题":
+            prompt = f"""
+            请根据以下要求生成一道多选题(注意, 正确选项必须大于等于2个):
+            知识点: {knowledge_point}
+            题型: {question_type}
+            难度等级: {difficulty}/5
+
+            返回JSON格式包含:
+            1. content: 题目内容
+            2. options: 选项列表
+            3. answer: 标准答案
+            4. analysis: 解题思路
+            5. score: 分值
+            """
+        elif question_type == "案例分析题":
+            prompt = f"""
+            请根据以下要求生成一道案例分析题，要求学生以简答的形式回答，注意不是选择题，不要给出选项:
+            知识点: {knowledge_point}
+            题型: {question_type}
+            难度等级: {difficulty}/5
+
+            返回JSON格式包含:
+            1. content: 题目内容
             2. answer: 标准答案
             3. analysis: 解题思路
             4. score: 分值
@@ -51,7 +78,7 @@ class ExamGeneratorAgent:
 
             返回JSON格式包含:
             1. content: 题目内容
-            2. options: 选项列表(单选题和多选题必需，其他题型不需要这项内容)
+            2. options: 选项列表(单选题必需，其他题型不需要这项内容)
             3. answer: 标准答案
             4. analysis: 解题思路
             5. score: 分值

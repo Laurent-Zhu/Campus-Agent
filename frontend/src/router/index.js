@@ -21,7 +21,7 @@ const routes = [
       {
         path: 'exam-generate',
         name: 'ExamGenerator',
-        component: () => import('@/pages/teacher/ExamGenerator.vue') // 生成考核页面
+        component: () => import('@/pages/teacher/ExamGeneratorNew.vue') // 生成考核页面
       }
       // 可继续添加教师端其它子页面
     ]

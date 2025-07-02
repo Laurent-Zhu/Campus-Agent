@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 获取数据库URL
-DATABASE_URL = os.getenv("DB_URL", "sqlite:///./campus.db")
+DATABASE_URL = os.getenv("DB_URL", "sqlite:///./campus_agent.db")
 
 # 创建引擎
 engine = create_engine(
